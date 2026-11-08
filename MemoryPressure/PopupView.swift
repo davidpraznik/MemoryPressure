@@ -332,15 +332,19 @@ struct PopupView: View {
     }
 
     private var pressureCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let pillColor = isHigh ? warnTint : tint
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(L10n.t("MEMORY PRESSURE", "PRITISK POMNILNIKA"))
                     .font(mono(13, .bold))
                     .foregroundStyle(tint)
                 Spacer()
-                Text("30 min")
+                Text("\(Int(monitor.pressure.rounded())) %")
                     .font(mono(12))
-                    .foregroundStyle(Color.mpMuted)
+                    .foregroundStyle(pillColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(pillColor.opacity(0.18)))
             }
             PressureChart(values: monitor.pressureHistory,
                           limit: pressureLimit,
@@ -354,7 +358,18 @@ struct PopupView: View {
                 Text(L10n.t("Upper limit: \(Int(pressureLimit)) %", "Zgornja meja: \(Int(pressureLimit)) %"))
                     .font(mono(12))
                     .foregroundStyle(Color.mpMuted)
+                Spacer()
+                Text("30 min")
+                    .font(mono(12))
+                    .foregroundStyle(Color.mpMuted)
             }
+            Text(L10n.t("How hard macOS is working to free memory. Not the same as RAM used.",
+                        "Kako močno macOS sprošča pomnilnik. To ni isto kot zasedeni RAM."))
+                .font(mono(12))
+                .foregroundStyle(Color.mpMuted)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
