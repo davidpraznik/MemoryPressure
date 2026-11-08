@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 private extension Color {
     static let sText = Color(red: 0.949, green: 0.953, blue: 0.961)   // #f2f3f5
@@ -43,6 +44,8 @@ struct SettingsView: View {
     @AppStorage("moduleNet") private var moduleNet = true
     @AppStorage("moduleFan") private var moduleFan = true
 
+    @State private var launchAtLogin = false
+
     private var tint: Color { Theme.normal(accent) }
 
     private func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
@@ -69,12 +72,16 @@ struct SettingsView: View {
                 value: $cpuLimit,
                 range: 70...100
             )
+            launchRow
             Rectangle()
                 .fill(Color.white.opacity(0.1))
                 .frame(height: 1)
             footer
         }
         .foregroundStyle(Color.sText)
+        .onAppear {
+            launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
     }
 
     // MARK: Header
@@ -260,6 +267,42 @@ struct SettingsView: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.sCard))
+    }
+
+    // MARK: Launch at login
+
+    private var launchBinding: Binding<Bool> {
+        Binding(
+            get: { launchAtLogin },
+            set: { setLaunchAtLogin($0) }
+        )
+    }
+
+    private var launchRow: some View {
+        HStack {
+            Text(L10n.t("Launch at login", "Zaženi ob prijavi"))
+                .font(mono(14))
+            Spacer()
+            SettingsPill(isOn: launchBinding, tint: tint)
+        }
+        .frame(height: 52)
+    }
+
+    private func setLaunchAtLogin(_ on: Bool) {
+        do {
+            if on {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            // Stanje se spodaj prebere iz sistema, zato se preklopnik vrne na pravo vrednost
+        }
+        let status = SMAppService.mainApp.status
+        if on && status == .requiresApproval {
+            SMAppService.openSystemSettingsLoginItems()
+        }
+        launchAtLogin = status == .enabled
     }
 
     // MARK: Footer
