@@ -27,8 +27,10 @@ final class SystemStats {
         return total > 0 ? (user + system + nice) / total * 100 : 0
     }
 
-    // RAM kot v Activity Monitor: app memory + wired + compressed
+    // RAM kot v Activity Monitor: app memory + wired + compressed.
+    // GB so binarni (2^30 bajtov), kot jih kaže macOS.
     func memory() -> (usedGB: Double, totalGB: Double, percent: Double) {
+        let gib = 1_073_741_824.0
         var vm = vm_statistics64_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.stride / MemoryLayout<integer_t>.stride)
         let result = withUnsafeMutablePointer(to: &vm) {
@@ -37,11 +39,11 @@ final class SystemStats {
             }
         }
         let total = Double(ProcessInfo.processInfo.physicalMemory)
-        guard result == KERN_SUCCESS else { return (0, total / 1e9, 0) }
+        guard result == KERN_SUCCESS else { return (0, total / gib, 0) }
 
         let page = Double(getpagesize())
         let appPages = Double(vm.internal_page_count) - Double(vm.purgeable_count)
         let used = (appPages + Double(vm.wire_count) + Double(vm.compressor_page_count)) * page
-        return (used / 1e9, total / 1e9, used / total * 100)
+        return (used / gib, total / gib, used / total * 100)
     }
 }
