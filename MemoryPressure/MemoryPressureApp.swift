@@ -35,6 +35,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.object(forKey: "pressureLimit") as? Double ?? 85
     }
 
+    // Položaj ikone v menubaru na zaslonu
+    private var statusButtonScreenFrame: NSRect? {
+        guard let button = statusItem.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.target = self
@@ -70,9 +76,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showPanel() {
-        guard let button = statusItem.button, let window = button.window else { return }
+        guard let buttonFrame = statusButtonScreenFrame,
+              let window = statusItem.button?.window else { return }
         monitor.setModulesActive(true)
-        let buttonFrame = window.convertToScreen(button.convert(button.bounds, to: nil))
         let size = host.fittingSize
         let screen = window.screen?.visibleFrame ?? .zero
         var x = buttonFrame.midX - size.width / 2
@@ -80,8 +86,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let y = buttonFrame.minY - size.height - 6
         panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: true)
         panel.makeKeyAndOrderFront(nil)
+        // Klik zunaj okna ga zapre. Klik na ikono v menubaru se ignorira,
+        // ker ga obdela togglePanel (drugače bi se okno zaprlo in takoj spet odprlo).
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.hidePanel()
+            guard let self else { return }
+            if let frame = self.statusButtonScreenFrame, frame.contains(NSEvent.mouseLocation) { return }
+            self.hidePanel()
         }
     }
 
