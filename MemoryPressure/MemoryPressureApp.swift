@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var host: NSHostingView<PopupView>!
     private var clickMonitor: Any?
     private let monitor = Monitor()
+    private let arrow = ArrowModel()
     private var timer: Timer?
 
     private var alertPanel: PopupPanel?
@@ -46,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePanel)
 
-        host = NSHostingView(rootView: PopupView(monitor: monitor))
+        host = NSHostingView(rootView: PopupView(monitor: monitor, arrow: arrow))
         panel = PopupPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 200),
                            styleMask: [.borderless, .nonactivatingPanel],
                            backing: .buffered, defer: false)
@@ -84,6 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var x = buttonFrame.midX - size.width / 2
         x = min(max(x, screen.minX + 8), screen.maxX - size.width - 8)
         let y = buttonFrame.minY - size.height - 6
+        // Trikotnik kaže na sredino ikone, tudi če je okno zaradi roba zaslona premaknjeno
+        arrow.centerX = min(max(buttonFrame.midX - x, 30), size.width - 30)
         panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: true)
         panel.makeKeyAndOrderFront(nil)
         // Klik zunaj okna ga zapre. Klik na ikono v menubaru se ignorira,

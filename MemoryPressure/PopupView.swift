@@ -13,6 +13,12 @@ extension Notification.Name {
     static let popupContentChanged = Notification.Name("popupContentChanged")
 }
 
+// Vodoravni položaj trikotnika (sredina) merjen od levega roba okna
+@Observable
+final class ArrowModel {
+    var centerX: CGFloat = 190
+}
+
 // MARK: - Helpers
 
 private func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
@@ -45,6 +51,32 @@ private struct HLine: Shape {
         var p = Path()
         p.move(to: CGPoint(x: rect.minX, y: rect.midY))
         p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return p
+    }
+}
+
+// Trikotnik nad oknom: polnilo (zaprta oblika) in rob (samo poševni stranici)
+private struct CaretShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: 0, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.midX - 2.3, y: 1.4))
+        p.addQuadCurve(to: CGPoint(x: rect.midX + 2.3, y: 1.4),
+                       control: CGPoint(x: rect.midX, y: -1.6))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+private struct CaretEdge: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: 0, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.midX - 2.3, y: 1.4))
+        p.addQuadCurve(to: CGPoint(x: rect.midX + 2.3, y: 1.4),
+                       control: CGPoint(x: rect.midX, y: -1.6))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
         return p
     }
 }
@@ -153,6 +185,7 @@ private enum Module: Hashable {
 
 struct PopupView: View {
     let monitor: Monitor
+    var arrow: ArrowModel = ArrowModel()
 
     @AppStorage("language") private var language = "en"
     @AppStorage("accent") private var accent = "multi"
@@ -165,6 +198,9 @@ struct PopupView: View {
     @AppStorage("moduleFan") private var moduleFan = true
 
     @State private var showSettings = false
+
+    private let caretWidth: CGFloat = 18
+    private let caretHeight: CGFloat = 8
 
     private var tint: Color { Theme.normal(accent) }
     private var warnTint: Color { Theme.warn(accent) }
@@ -189,12 +225,32 @@ struct PopupView: View {
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .foregroundStyle(Color.mpText)
+        .padding(.top, caretHeight)
+        .overlay(alignment: .topLeading) {
+            caret
+                .offset(x: arrow.centerX - caretWidth / 2)
+        }
         .onChange(of: showSettings) { _, _ in
             NotificationCenter.default.post(name: .popupContentChanged, object: nil)
         }
         .onChange(of: language) { _, _ in
             NotificationCenter.default.post(name: .popupContentChanged, object: nil)
         }
+    }
+
+    // Trikotnik, ki kaže proti ikoni v menubaru. Rob okna pod njim je prekrit,
+    // da trikotnik izgleda kot del okna.
+    private var caret: some View {
+        ZStack {
+            CaretShape().fill(Color.mpBackground)
+            CaretEdge().stroke(Color.white.opacity(0.1), lineWidth: 1)
+            Rectangle()
+                .fill(Color.mpBackground)
+                .frame(width: caretWidth - 4, height: 2)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .offset(y: 1)
+        }
+        .frame(width: caretWidth, height: caretHeight)
     }
 
     private var isHigh: Bool { monitor.pressure >= pressureLimit }
