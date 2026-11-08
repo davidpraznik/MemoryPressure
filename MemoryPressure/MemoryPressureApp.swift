@@ -64,6 +64,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { self?.resizePanel() }
         }
 
+        UpdateChecker.shared.start()
+
         update()
         let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.update() }

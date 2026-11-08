@@ -44,7 +44,10 @@ struct SettingsView: View {
     @AppStorage("moduleNet") private var moduleNet = true
     @AppStorage("moduleFan") private var moduleFan = true
 
+    @AppStorage("autoUpdate") private var autoUpdate = true
+
     @State private var launchAtLogin = false
+    private let updater = UpdateChecker.shared
 
     private var tint: Color { Theme.normal(accent) }
 
@@ -72,7 +75,11 @@ struct SettingsView: View {
                 value: $cpuLimit,
                 range: 70...100
             )
-            launchRow
+            VStack(spacing: 0) {
+                launchRow
+                autoUpdateRow
+                updateCheckRow
+            }
             Rectangle()
                 .fill(Color.white.opacity(0.1))
                 .frame(height: 1)
@@ -81,6 +88,9 @@ struct SettingsView: View {
         .foregroundStyle(Color.sText)
         .onAppear {
             launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
+        .onChange(of: updater.state) { _, _ in
+            NotificationCenter.default.post(name: .popupContentChanged, object: nil)
         }
     }
 
@@ -305,12 +315,64 @@ struct SettingsView: View {
         launchAtLogin = status == .enabled
     }
 
+    // MARK: Updates
+
+    private var autoUpdateBinding: Binding<Bool> {
+        Binding(
+            get: { autoUpdate },
+            set: { on in
+                autoUpdate = on
+                if on { Task { await updater.check() } }
+            }
+        )
+    }
+
+    private var autoUpdateRow: some View {
+        HStack {
+            Text(L10n.t("Check for updates automatically", "Samodejno preveri posodobitve"))
+                .font(mono(14))
+            Spacer()
+            SettingsPill(isOn: autoUpdateBinding, tint: tint)
+        }
+        .frame(height: 52)
+    }
+
+    private var updateCheckRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                Task { await updater.check() }
+            } label: {
+                Text(L10n.t("Check for updates", "Preveri posodobitve"))
+                    .font(mono(13, .bold))
+                    .padding(.horizontal, 14)
+                    .frame(height: 36)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.1)))
+                    .contentShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(updater.message)
+                    .font(mono(12))
+                    .foregroundStyle(Color.sMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                if case .available(_, let url) = updater.state {
+                    Link(L10n.t("Download", "Prenesi"), destination: url)
+                        .font(mono(12, .bold))
+                        .foregroundStyle(Theme.link(accent))
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+    }
+
     // MARK: Footer
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Memory Pressure 1.0")
+                Text("Memory Pressure \(updater.installed)")
                     .font(mono(13, .bold))
                 Spacer()
                 Button {
