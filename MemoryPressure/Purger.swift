@@ -1,8 +1,8 @@
 import Foundation
 
 enum Purger {
-    // Čiščenje brez gesla (zahteva pravilo v /etc/sudoers.d/memorypressure).
-    // Vrne true, če je uspelo.
+    // Passwordless purge. Needs a sudoers rule in /etc/sudoers.d/memorypressure.
+    // Calls completion with true on success.
     static func runSilently(completion: @escaping (Bool) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
             let process = Process()
@@ -22,7 +22,7 @@ enum Purger {
         }
     }
 
-    // Gumb: najprej brez gesla, če ne gre, pokaže sistemsko okno za geslo
+    // Button action: try without a password first, otherwise show the system password prompt.
     static func run() {
         runSilently { ok in
             if !ok { runWithPassword() }
@@ -34,7 +34,7 @@ enum Purger {
         var error: NSDictionary?
         NSAppleScript(source: source)?.executeAndReturnError(&error)
         if let error {
-            print("purge napaka: \(error)")
+            print("purge error: \(error)")
         }
     }
 }
