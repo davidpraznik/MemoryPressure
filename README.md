@@ -1,38 +1,54 @@
+![Memory Pressure, a menu bar memory monitor for macOS.](docs/memorypressure-social-preview-v3.png)
+
 # Memory Pressure
 
-A small macOS menu bar app that shows CPU use, RAM use and memory pressure. It warns you when memory pressure gets high and can free inactive memory with one click.
+Memory Pressure is a free, open source menu bar app for macOS, written in Swift and SwiftUI. It shows CPU use, RAM use and memory pressure, warns you when memory pressure gets high and can free inactive memory with one click.
 
-## What it shows
+## Features
+
+### What it shows
 
 - CPU and RAM use in the menu bar, updated every two seconds.
 - A popup with CPU, RAM (used and total), a 30 minute memory pressure chart with your limit marked on it, and the apps using the most memory, each with a quit button.
 - Optional modules for GPU, disk, network and fans. Fans appear only on Macs that have one.
 
-## Features
+### Reminder and auto clear
 
-- **Reminder:** a card appears at the top right of the screen when memory pressure reaches your limit. It names the app using the most memory and offers to quit it or clear the cache.
-- **Auto clear:** can clear memory by itself when the limit is reached, at most once every 10 minutes. It needs the passwordless rule described below.
-- **Clear memory:** frees inactive memory (runs `purge`, which needs administrator rights). The button asks for your password, unless the passwordless rule is set up.
-- **Limits:** memory pressure limit and CPU limit are set in Settings.
-- **Accent colour:** multicolour or a single colour of your choice.
-- **Language:** English or Slovenian.
-- **Launch at login.**
+- A card appears at the top right of the screen when memory pressure reaches your limit. It names the app using the most memory and offers to quit it or clear the cache.
+- Auto clear can clear memory by itself when the limit is reached, at most once every 10 minutes. It needs the passwordless rule described below.
+- Clear memory frees inactive memory (runs `purge`, which needs administrator rights). The button asks for your password, unless the passwordless rule is set up.
 
-## Memory pressure and RAM are not the same
+### Memory pressure and RAM are not the same
 
 macOS fills free RAM with cached files on purpose, so a high RAM percentage is normal. Memory pressure shows how hard macOS is working to free memory, and that is what the reminder uses.
 
+## Settings
+
+- Language: English or Slovenian.
+- Accent colour: multicolour or one of seven colours, applied across the app.
+- Modules: show or hide GPU, disk, network and fans.
+- Memory pressure limit: the level at which the reminder and auto clear start.
+- CPU limit: the CPU number in the menu bar changes colour at this level.
+- Launch at login.
+
 ## Requirements
 
-macOS 14.6 or newer. Runs on Apple silicon and Intel Macs.
+- macOS 14.6 or newer.
+- Apple silicon or Intel Mac.
 
-## Install
+## Download
 
-1. Download `MemoryPressure.zip` from the [latest release](https://github.com/davidpraznik/MemoryPressure/releases/latest) and unzip it.
-2. Move `MemoryPressure.app` to your Applications folder.
-3. Open it. macOS will warn that the app cannot be checked for malicious software, because it is not notarized. To open it anyway, go to System Settings, Privacy & Security, scroll down and click **Open Anyway**.
+Download the latest `MemoryPressure.zip` from [Releases](https://github.com/davidpraznik/MemoryPressure/releases/latest), unzip it and move MemoryPressure to Applications.
 
-Alternatively, remove the quarantine flag in Terminal:
+### Opening a downloaded build
+
+The builds are not signed with a paid Apple Developer account and are not notarized, so macOS will block the first launch.
+
+1. Open MemoryPressure once. macOS shows a message that it cannot be opened.
+2. Open System Settings > Privacy & Security and scroll down to the Security section.
+3. Click Open Anyway next to MemoryPressure and confirm.
+
+You only need to do this once. Alternatively, remove the quarantine flag in Terminal:
 
     xattr -dr com.apple.quarantine /Applications/MemoryPressure.app
 
@@ -54,8 +70,16 @@ To undo the rule later:
 
 ## Build from source
 
-Open `MemoryPressure.xcodeproj` in Xcode and run the `MemoryPressure` scheme.
+1. Clone the repository.
+2. Open `MemoryPressure.xcodeproj` in Xcode.
+3. Select the MemoryPressure scheme and press Run (⌘R).
 
-## Author
+## About
 
-© 2026 David Praznik
+I am David Praznik, a UX/UI and product designer. Memory Pressure started as a tool for my own needs and I am sharing it as it is. It is open source under the MIT licence. If you find a bug or miss something, open an [issue](https://github.com/davidpraznik/MemoryPressure/issues).
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).
+
+Copyright © 2026 David Praznik
