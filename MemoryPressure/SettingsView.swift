@@ -80,10 +80,6 @@ struct SettingsView: View {
                 autoUpdateRow
                 updateCheckRow
             }
-            Rectangle()
-                .fill(Color.white.opacity(0.1))
-                .frame(height: 1)
-            footer
         }
         .foregroundStyle(Color.sText)
         .onAppear {
@@ -365,41 +361,5 @@ struct SettingsView: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 8)
-    }
-
-    // MARK: Footer
-
-    private var footer: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("Memory Pressure \(updater.installed)")
-                    .font(mono(13, .bold))
-                Spacer()
-                Button {
-                    NSApp.terminate(nil)
-                } label: {
-                    Image(systemName: "power")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.sMuted)
-                        .frame(width: 36, height: 36)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, -8)
-                .accessibilityLabel(L10n.t("Quit Memory Pressure", "Zapri Memory Pressure"))
-            }
-            .frame(height: 20)
-            Text("© 2026 David Praznik")
-                .font(mono(12))
-                .foregroundStyle(Color.sMuted)
-            Link("github.com/davidpraznik/MemoryPressure",
-                 destination: URL(string: "https://github.com/davidpraznik/MemoryPressure")!)
-                .font(mono(12))
-                .foregroundStyle(Theme.link(accent))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
-        .padding(.top, 4)
-        .padding(.bottom, 2)
     }
 }

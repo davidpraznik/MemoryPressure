@@ -670,8 +670,24 @@ struct PopupView: View {
 
     private var copyright: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Memory Pressure 1.0")
-                .font(mono(13, .bold))
+            HStack {
+                Text("Memory Pressure \(appVersion)")
+                    .font(mono(13, .bold))
+                Spacer()
+                Button {
+                    NSApp.terminate(nil)
+                } label: {
+                    Image(systemName: "power")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.mpMuted)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, -8)
+                .accessibilityLabel(L10n.t("Quit Memory Pressure", "Zapri Memory Pressure"))
+            }
+            .frame(height: 20)
             Text("© 2026 David Praznik")
                 .font(mono(12))
                 .foregroundStyle(Color.mpMuted)
@@ -684,5 +700,9 @@ struct PopupView: View {
         .padding(.top, 4)
         .padding(.horizontal, 4)
         .padding(.bottom, 2)
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 }
