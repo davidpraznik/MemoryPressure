@@ -27,9 +27,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var alertArmed = true
     private var lastAlert: Date?
 
-    private let cpuLimit = 90.0
-    private let pressureLimit = 85.0
-    private let coral = NSColor(srgbRed: 1.0, green: 0.478, blue: 0.4, alpha: 1)
+    // Meji se berejo iz nastavitev (privzeto 90 in 85)
+    private var cpuLimit: Double {
+        UserDefaults.standard.object(forKey: "cpuLimit") as? Double ?? 90
+    }
+    private var pressureLimit: Double {
+        UserDefaults.standard.object(forKey: "pressureLimit") as? Double ?? 85
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -48,6 +52,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = host
 
+        NotificationCenter.default.addObserver(forName: .popupContentChanged,
+                                               object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.resizePanel() }
+        }
+
         update()
         let t = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.update() }
@@ -62,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showPanel() {
         guard let button = statusItem.button, let window = button.window else { return }
+        monitor.setModulesActive(true)
         let buttonFrame = window.convertToScreen(button.convert(button.bounds, to: nil))
         let size = host.fittingSize
         let screen = window.screen?.visibleFrame ?? .zero
@@ -76,10 +86,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func hidePanel() {
+        monitor.setModulesActive(false)
         panel.orderOut(nil)
         if let m = clickMonitor {
             NSEvent.removeMonitor(m)
             clickMonitor = nil
+        }
+    }
+
+    // Ob menjavi vsebine (nastavitve, jezik) se panel prilagodi višini, zgornji rob ostane na mestu
+    private func resizePanel() {
+        guard panel.isVisible else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self else { return }
+            self.host.layoutSubtreeIfNeeded()
+            let size = self.host.fittingSize
+            let old = self.panel.frame
+            let frame = NSRect(x: old.minX, y: old.maxY - size.height,
+                               width: size.width, height: size.height)
+            self.panel.setFrame(frame, display: true, animate: false)
         }
     }
 
@@ -140,9 +165,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let defaults = UserDefaults.standard
         let remind = defaults.object(forKey: "remindEnabled") as? Bool ?? true
         let autoClear = defaults.object(forKey: "autoClearEnabled") as? Bool ?? false
+        let limit = pressureLimit
 
-        if monitor.pressure < pressureLimit - 5 { alertArmed = true }
-        guard remind || autoClear, alertArmed, monitor.pressure >= pressureLimit else { return }
+        if monitor.pressure < limit - 5 { alertArmed = true }
+        guard remind || autoClear, alertArmed, monitor.pressure >= limit else { return }
         if let last = lastAlert, Date().timeIntervalSince(last) < 600 { return }
         alertArmed = false
         lastAlert = Date()
@@ -159,16 +185,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func update() {
         monitor.refresh()
-        let locale = Locale(identifier: "sl_SI")
+        let isSlovene = UserDefaults.standard.string(forKey: "language") == "si"
+        let locale = Locale(identifier: isSlovene ? "sl_SI" : "en_US")
         let cpuText = String(format: "%.0f %%", locale: locale, monitor.cpu)
         let ramText = String(format: "%.1f GB", locale: locale, monitor.ramUsedGB)
 
+        let hotColor = Theme.warnNS
         let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .medium)
         let title = NSMutableAttributedString()
         func part(_ text: String, hot: Bool) {
             title.append(NSAttributedString(string: text, attributes: [
                 .font: font,
-                .foregroundColor: hot ? coral : NSColor.labelColor
+                .foregroundColor: hot ? hotColor : NSColor.labelColor
             ]))
         }
         part(cpuText, hot: monitor.cpu >= cpuLimit)
