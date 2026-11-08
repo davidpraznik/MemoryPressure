@@ -56,6 +56,31 @@ enum Theme {
         (option(from: raw).rgb ?? linkRGB).color
     }
 
+    // Primarni gumb v opomniku. Večbarvno: temen koral #cf4630 z belim napisom.
+    // Enobarvno: temnejša različica izbrane barve (svetlost 88 %, nasičenost 106 %).
+    // Če je ta še vedno svetla (oranžna, zelena, siva), ostane izbrana barva z temnim napisom.
+    static func alertButton(_ raw: String) -> (fill: Color, text: Color) {
+        guard let base = option(from: raw).rgb else {
+            return (Color(red: 0.812, green: 0.275, blue: 0.188), Color.white) // #cf4630
+        }
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        base.ns.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        let darkNS = NSColor(hue: h, saturation: min(1, s * 1.06), brightness: b * 0.88, alpha: 1)
+        let dark = darkNS.usingColorSpace(.sRGB) ?? darkNS
+        if luminance(dark) <= 0.2 {
+            return (Color(nsColor: dark), Color.white)
+        }
+        return (base.color, Color(red: 0.106, green: 0.114, blue: 0.122)) // #1b1d1f
+    }
+
+    private static func luminance(_ c: NSColor) -> Double {
+        func lin(_ v: CGFloat) -> Double {
+            let x = Double(v)
+            return x <= 0.03928 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * lin(c.redComponent) + 0.7152 * lin(c.greenComponent) + 0.0722 * lin(c.blueComponent)
+    }
+
     // Za AppKit (menubar), bere neposredno iz UserDefaults
     static var currentRaw: String {
         UserDefaults.standard.string(forKey: key) ?? "multi"

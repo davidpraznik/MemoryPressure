@@ -142,9 +142,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.hasShadow = true
         alert.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         alert.contentView = alertHost
-        if let screen = NSScreen.main?.visibleFrame {
-            alert.setFrameOrigin(NSPoint(x: screen.maxX - size.width - 16,
-                                         y: screen.maxY - size.height - 16))
+
+        // Opomnik gre na zaslon, kjer je menubar z ikono appa
+        let screen = statusItem.button?.window?.screen ?? NSScreen.main ?? NSScreen.screens.first
+        if let visible = screen?.visibleFrame {
+            alert.setFrameOrigin(NSPoint(x: visible.maxX - size.width - 16,
+                                         y: visible.maxY - size.height - 16))
         }
         alert.orderFrontRegardless()
         alertPanel = alert
@@ -168,6 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let limit = pressureLimit
 
         if monitor.pressure < limit - 5 { alertArmed = true }
+
         guard remind || autoClear, alertArmed, monitor.pressure >= limit else { return }
         if let last = lastAlert, Date().timeIntervalSince(last) < 600 { return }
         alertArmed = false
