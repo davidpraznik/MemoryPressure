@@ -154,29 +154,6 @@ private struct PressureChart: View {
     }
 }
 
-private struct PillToggle: View {
-    @Binding var isOn: Bool
-    let tint: Color
-
-    var body: some View {
-        Button {
-            isOn.toggle()
-        } label: {
-            ZStack(alignment: isOn ? .trailing : .leading) {
-                Capsule()
-                    .fill(isOn ? tint : Color.white.opacity(0.18))
-                    .frame(width: 46, height: 28)
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 22, height: 22)
-                    .padding(3)
-            }
-            .animation(.easeOut(duration: 0.15), value: isOn)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 private enum Module: Hashable {
     case gpu, disk, net, fan
 }
@@ -189,8 +166,6 @@ struct PopupView: View {
 
     @AppStorage("language") private var language = "en"
     @AppStorage("accent") private var accent = "multi"
-    @AppStorage("remindEnabled") private var remindEnabled = true
-    @AppStorage("autoClearEnabled") private var autoClearEnabled = false
     @AppStorage("pressureLimit") private var pressureLimit = 85.0
     @AppStorage("moduleGPU") private var moduleGPU = true
     @AppStorage("moduleDisk") private var moduleDisk = true
@@ -198,15 +173,22 @@ struct PopupView: View {
     @AppStorage("moduleFan") private var moduleFan = true
 
     @State private var showSettings = false
+    @State private var contentHeight: CGFloat = 0
 
     private let caretWidth: CGFloat = 18
     private let caretHeight: CGFloat = 8
+    private let cardPad = EdgeInsets(top: 9, leading: 11, bottom: 9, trailing: 11)
 
     private var tint: Color { Theme.normal(accent) }
     private var warnTint: Color { Theme.warn(accent) }
     private var linkTint: Color { Theme.link(accent) }
 
-    var body: some View {
+    // Največja višina okna: višina uporabnega dela zaslona (brez menubara in docka) z malo roba
+    private var maxPanelHeight: CGFloat {
+        (NSScreen.main?.visibleFrame.height ?? 800) - 24
+    }
+
+    private var content: some View {
         Group {
             if showSettings {
                 SettingsView(onBack: { showSettings = false })
@@ -214,8 +196,29 @@ struct PopupView: View {
                 mainContent
             }
         }
-        .padding(16)
+        .padding(12)
         .frame(width: 380)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { height in
+            contentHeight = height
+        }
+    }
+
+    var body: some View {
+        let limit = maxPanelHeight - caretHeight
+        Group {
+            if contentHeight > limit {
+                // Vsebina je višja od zaslona: okno se omeji na zaslon, vsebina se pomika
+                ScrollView(.vertical, showsIndicators: false) {
+                    content
+                }
+                .frame(width: 380, height: limit)
+            } else {
+                content
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22))
         .background(
             RoundedRectangle(cornerRadius: 22)
                 .fill(Color.mpBackground)
@@ -234,6 +237,9 @@ struct PopupView: View {
             NotificationCenter.default.post(name: .popupContentChanged, object: nil)
         }
         .onChange(of: language) { _, _ in
+            NotificationCenter.default.post(name: .popupContentChanged, object: nil)
+        }
+        .onChange(of: contentHeight) { _, _ in
             NotificationCenter.default.post(name: .popupContentChanged, object: nil)
         }
     }
@@ -256,9 +262,9 @@ struct PopupView: View {
     private var isHigh: Bool { monitor.pressure >= pressureLimit }
 
     private var mainContent: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 6) {
             header
-            HStack(spacing: 12) {
+            HStack(spacing: 6) {
                 cpuCard
                 ramCard
             }
@@ -269,8 +275,6 @@ struct PopupView: View {
             moduleRow([.net, .fan])
             processList
             divider
-            toggleRows
-            divider
             copyright
         }
     }
@@ -279,6 +283,10 @@ struct PopupView: View {
         Rectangle()
             .fill(Color.white.opacity(0.1))
             .frame(height: 1)
+    }
+
+    private func cardBackground() -> some View {
+        RoundedRectangle(cornerRadius: 12).fill(Color.mpCard)
     }
 
     // MARK: Header
@@ -299,8 +307,8 @@ struct PopupView: View {
         .alignmentGuide(.firstTextBaseline) { d in d[.bottom] - overshoot }
     }
 
-    // Glava je visoka toliko kot vsebina (20), da je razmik do kartic enak razmiku med karticami.
-    // Zobnik ima večje klikljivo področje, ki ne povečuje vrstice.
+    // Glava je visoka 20. Zobnik je enako velik kot ikona za izhod v nogi (15 pt, krepko),
+    // klikljivo področje je večje in ne povečuje vrstice.
     private var header: some View {
         HStack(spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -313,14 +321,14 @@ struct PopupView: View {
                 showSettings = true
             } label: {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 18))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.mpMuted)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 36, height: 36)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.trailing, -8)
-            .padding(.vertical, -12)
+            .padding(.vertical, -8)
             .accessibilityLabel(L10n.t("Settings", "Nastavitve"))
         }
         .frame(height: 20)
@@ -329,22 +337,22 @@ struct PopupView: View {
     // MARK: Cards
 
     private func cardTitle(_ icon: String, _ text: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
             Text(text.uppercased())
-                .font(mono(13, .bold))
+                .font(mono(12, .bold))
         }
         .foregroundStyle(tint)
-        .frame(height: 22)
+        .frame(height: 18)
     }
 
-    private func bigValue(_ value: String, unit: String) -> some View {
+    private func bigValue(_ value: String, unit: String, size: CGFloat = 26) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(value)
-                .font(mono(28, .bold))
+                .font(mono(size, .bold))
             Text(" \(unit)")
-                .font(mono(14, .medium))
+                .font(mono(size >= 26 ? 13 : 12, .medium))
                 .foregroundStyle(Color.mpMuted)
         }
         .lineLimit(1)
@@ -352,61 +360,61 @@ struct PopupView: View {
     }
 
     private var cpuCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
             cardTitle("cpu", "CPU")
-            bigValue("\(Int(monitor.cpu.rounded()))", unit: "%")
-            Sparkline(values: monitor.cpuHistory, color: tint)
-                .frame(height: 32)
+            HStack(alignment: .bottom, spacing: 4) {
+                bigValue("\(Int(monitor.cpu.rounded()))", unit: "%")
+                Spacer(minLength: 0)
+                Sparkline(values: monitor.cpuHistory, color: tint)
+                    .frame(width: 70, height: 24)
+            }
         }
-        .padding(14)
+        .padding(cardPad)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.mpCard))
+        .background(cardBackground())
     }
 
     private var ramCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack {
                 cardTitle("memorychip", "RAM")
                 Spacer()
                 Text("\(Int(monitor.ramPercent.rounded())) %")
-                    .font(mono(12))
+                    .font(mono(11))
                     .foregroundStyle(tint)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 1)
                     .background(Capsule().fill(tint.opacity(0.18)))
             }
             bigValue(decimal(monitor.ramUsedGB), unit: "GB")
-            Spacer(minLength: 0)
-            Text(L10n.t("of \(decimal(monitor.ramTotalGB, digits: 0)) GB",
-                        "od \(decimal(monitor.ramTotalGB, digits: 0)) GB"))
-                .font(mono(12))
-                .foregroundStyle(Color.mpMuted)
         }
-        .padding(14)
+        .padding(cardPad)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.mpCard))
+        .background(cardBackground())
+        .help(L10n.t("of \(decimal(monitor.ramTotalGB, digits: 0)) GB",
+                     "od \(decimal(monitor.ramTotalGB, digits: 0)) GB"))
     }
 
     private var pressureCard: some View {
         let pillColor = isHigh ? warnTint : tint
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(L10n.t("MEMORY PRESSURE", "PRITISK POMNILNIKA"))
-                    .font(mono(13, .bold))
+                    .font(mono(12, .bold))
                     .foregroundStyle(tint)
                 Spacer()
                 Text("\(Int(monitor.pressure.rounded())) %")
-                    .font(mono(12))
+                    .font(mono(11))
                     .foregroundStyle(pillColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 1)
                     .background(Capsule().fill(pillColor.opacity(0.18)))
             }
             PressureChart(values: monitor.pressureHistory,
                           limit: pressureLimit,
                           lineColor: tint,
                           limitColor: warnTint)
-                .frame(height: 60)
+                .frame(height: 40)
             HStack(spacing: 6) {
                 HLine()
                     .stroke(warnTint, style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
@@ -427,27 +435,27 @@ struct PopupView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
+        .padding(cardPad)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.mpCard))
+        .background(cardBackground())
     }
 
     // MARK: Clear
 
     private var clearButton: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Button {
                 Purger.run()
             } label: {
-                HStack(spacing: 10) {
+                HStack(spacing: 6) {
                     Image(systemName: "sparkle")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                     Text(L10n.t("Clear memory", "Počisti pomnilnik"))
                         .font(mono(14, .bold))
                 }
                 .foregroundStyle(Color.mpDark)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(height: 36)
                 .background(RoundedRectangle(cornerRadius: 12)
                     .fill(Color(red: 0.925, green: 0.933, blue: 0.941)))
             }
@@ -479,7 +487,7 @@ struct PopupView: View {
     private func moduleRow(_ items: [Module]) -> some View {
         let active = items.filter { isOn($0) }
         if !active.isEmpty {
-            HStack(spacing: 12) {
+            HStack(spacing: 6) {
                 ForEach(active, id: \.self) { module in
                     moduleCard(module)
                 }
@@ -503,50 +511,34 @@ struct PopupView: View {
     }
 
     private func moduleBox<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
             content()
         }
-        .padding(14)
+        .padding(cardPad)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.mpCard))
+        .background(cardBackground())
     }
 
     private var gpuCard: some View {
         moduleBox {
             cardTitle("display", "GPU")
-            bigValue(monitor.gpu.map { "\(Int($0.rounded()))" } ?? "n/a",
-                     unit: monitor.gpu == nil ? "" : "%")
-            Sparkline(values: monitor.gpuHistory, color: tint)
-                .frame(height: 32)
-        }
-    }
-
-    private var diskBar: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.14))
-                Capsule()
-                    .fill(tint)
-                    .frame(width: geo.size.width * CGFloat(min(max(monitor.diskPercent, 0), 100) / 100))
+            HStack(alignment: .bottom, spacing: 4) {
+                bigValue(monitor.gpu.map { "\(Int($0.rounded()))" } ?? "n/a",
+                         unit: monitor.gpu == nil ? "" : "%", size: 22)
+                Spacer(minLength: 0)
+                Sparkline(values: monitor.gpuHistory, color: tint)
+                    .frame(width: 64, height: 22)
             }
         }
-        .frame(height: 6)
     }
 
     private var diskCard: some View {
         moduleBox {
             cardTitle("internaldrive", L10n.t("Disk", "Disk"))
-            bigValue(decimal(monitor.diskFreeGB), unit: L10n.t("GB free", "GB prosto"))
-            diskBar
-                .padding(.top, 8)
-            Spacer(minLength: 0)
-            Text(L10n.t("\(decimal(monitor.diskUsedGB)) GB used · \(Int(monitor.diskPercent.rounded())) %",
-                        "\(decimal(monitor.diskUsedGB)) GB zasedeno · \(Int(monitor.diskPercent.rounded())) %"))
-                .font(mono(12))
-                .foregroundStyle(Color.mpMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
+            bigValue(decimal(monitor.diskFreeGB), unit: L10n.t("GB free", "GB prosto"), size: 22)
         }
+        .help(L10n.t("\(decimal(monitor.diskUsedGB)) GB used · \(Int(monitor.diskPercent.rounded())) %",
+                     "\(decimal(monitor.diskUsedGB)) GB zasedeno · \(Int(monitor.diskPercent.rounded())) %"))
     }
 
     private var netCard: some View {
@@ -556,13 +548,14 @@ struct PopupView: View {
         let top = max(monitor.netHistory.suffix(60).max() ?? 0, 100_000)
         return moduleBox {
             cardTitle("network", L10n.t("Network", "Omrežje"))
-            bigValue(down.value, unit: down.unit)
-            Sparkline(values: monitor.netHistory, color: tint, scale: top)
-                .frame(height: 32)
-            Text("↑ \(up.value) \(up.unit)")
-                .font(mono(12))
-                .foregroundStyle(Color.mpMuted)
+            HStack(alignment: .bottom, spacing: 4) {
+                bigValue(down.value, unit: down.unit, size: 22)
+                Spacer(minLength: 0)
+                Sparkline(values: monitor.netHistory, color: tint, scale: top)
+                    .frame(width: 64, height: 22)
+            }
         }
+        .help("↑ \(up.value) \(up.unit)")
     }
 
     private var fanCountLabel: String {
@@ -576,12 +569,9 @@ struct PopupView: View {
         moduleBox {
             cardTitle("fan", L10n.t("Fan", "Ventilator"))
             bigValue(monitor.fanRPM.map { "\(Int($0.rounded()))" } ?? "n/a",
-                     unit: monitor.fanRPM == nil ? "" : "RPM")
-            Spacer(minLength: 0)
-            Text(fanCountLabel)
-                .font(mono(12))
-                .foregroundStyle(Color.mpMuted)
+                     unit: monitor.fanRPM == nil ? "" : "RPM", size: 22)
         }
+        .help(fanCountLabel)
     }
 
     // MARK: Processes
@@ -596,10 +586,10 @@ struct PopupView: View {
                 Text(L10n.t("QUIT", "ZAPRI"))
                     .frame(width: 56, alignment: .center)
             }
-            .font(mono(12, .bold))
+            .font(mono(11, .bold))
             .foregroundStyle(Color.mpMuted)
             .padding(.horizontal, 4)
-            .frame(height: 32)
+            .frame(height: 20)
 
             ForEach(monitor.apps) { app in
                 HStack(spacing: 0) {
@@ -616,54 +606,25 @@ struct PopupView: View {
                         quit(app)
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(Color.mpText)
-                            .frame(width: 32, height: 32)
-                            .background(Circle().fill(Color.white.opacity(0.08)))
+                            .frame(width: 56, height: 24)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .frame(width: 56)
                     .accessibilityLabel(L10n.t("Quit \(app.name)", "Zapri \(app.name)"))
                 }
                 .padding(.horizontal, 4)
-                .frame(height: 44)
+                .frame(height: 24)
             }
         }
-        .padding(.top, 4)
+        .padding(.top, 2)
     }
 
     private func quit(_ app: AppUsage) {
         NSWorkspace.shared.runningApplications
             .filter { $0.bundleURL?.path == app.id }
             .forEach { $0.terminate() }
-    }
-
-    // MARK: Toggles
-
-    private var toggleRows: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(L10n.t("Remind me at high pressure", "Opomnik ob visokem pritisku"))
-                    .font(mono(14))
-                Spacer()
-                PillToggle(isOn: $remindEnabled, tint: tint)
-            }
-            .frame(height: 52)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.t("Auto clear", "Samodejno čiščenje"))
-                        .font(mono(14))
-                    Text(L10n.t("at \(Int(pressureLimit)) %, at least 10 min apart",
-                                "pri \(Int(pressureLimit)) %, vsaj 10 min razmika"))
-                        .font(mono(12))
-                        .foregroundStyle(Color.mpMuted)
-                }
-                Spacer()
-                PillToggle(isOn: $autoClearEnabled, tint: tint)
-            }
-            .frame(height: 52)
-        }
     }
 
     // MARK: Footer
@@ -697,7 +658,7 @@ struct PopupView: View {
                 .foregroundStyle(linkTint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 4)
+        .padding(.top, 2)
         .padding(.horizontal, 4)
         .padding(.bottom, 2)
     }

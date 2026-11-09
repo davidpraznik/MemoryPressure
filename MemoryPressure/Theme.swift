@@ -16,13 +16,13 @@ enum AccentOption: String, CaseIterable, Identifiable {
     var rgb: RGB? {
         switch self {
         case .multi:  return nil
-        case .blue:   return RGB(r: 0.298, g: 0.537, b: 1.000) // #4c89ff
-        case .purple: return RGB(r: 0.678, g: 0.204, b: 0.847) // #ad34d8
-        case .pink:   return RGB(r: 0.867, g: 0.184, b: 0.647) // #dd2fa5
-        case .red:    return RGB(r: 0.878, g: 0.231, b: 0.251) // #e03b40
-        case .orange: return RGB(r: 0.910, g: 0.557, b: 0.204) // #e88e34
-        case .green:  return RGB(r: 0.435, g: 0.812, b: 0.498) // #6fcf7f
-        case .grey:   return RGB(r: 0.553, g: 0.553, b: 0.576) // #8d8d93
+        case .blue:   return RGB(r: 0.000, g: 0.533, b: 1.000) // #0088ff
+        case .purple: return RGB(r: 0.796, g: 0.188, b: 0.878) // #cb30e0
+        case .pink:   return RGB(r: 1.000, g: 0.161, b: 0.667) // #ff29aa
+        case .red:    return RGB(r: 1.000, g: 0.220, b: 0.235) // #ff383c
+        case .orange: return RGB(r: 1.000, g: 0.553, b: 0.157) // #ff8d28
+        case .green:  return RGB(r: 0.200, g: 0.780, b: 0.349) // #33c759
+        case .grey:   return RGB(r: 0.557, g: 0.557, b: 0.576) // #8e8e93
         }
     }
 

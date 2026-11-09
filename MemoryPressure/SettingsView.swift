@@ -44,19 +44,22 @@ struct SettingsView: View {
     @AppStorage("moduleNet") private var moduleNet = true
     @AppStorage("moduleFan") private var moduleFan = true
 
+    @AppStorage("remindEnabled") private var remindEnabled = true
+    @AppStorage("autoClearEnabled") private var autoClearEnabled = false
     @AppStorage("autoUpdate") private var autoUpdate = true
 
     @State private var launchAtLogin = false
     private let updater = UpdateChecker.shared
 
     private var tint: Color { Theme.normal(accent) }
+    private let cardPad = EdgeInsets(top: 9, leading: 11, bottom: 9, trailing: 11)
 
     private func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 6) {
             header
             languageCard
             accentCard
@@ -76,10 +79,17 @@ struct SettingsView: View {
                 range: 70...100
             )
             VStack(spacing: 0) {
-                launchRow
-                autoUpdateRow
-                updateCheckRow
+                toggleRow(L10n.t("Remind me at high pressure", "Opomnik ob visokem pritisku"),
+                          isOn: $remindEnabled)
+                toggleRow(L10n.t("Auto clear", "Samodejno čiščenje"), isOn: $autoClearEnabled)
+                    .help(L10n.t("At \(Int(pressureLimit)) %, at least 10 min apart",
+                                 "Pri \(Int(pressureLimit)) %, vsaj 10 min razmika"))
+                toggleRow(L10n.t("Launch at login", "Zaženi ob prijavi"), isOn: launchBinding)
+                toggleRow(L10n.t("Check for updates automatically", "Samodejno preveri posodobitve"),
+                          isOn: autoUpdateBinding)
             }
+            .padding(.horizontal, 4)
+            updateCheckRow
         }
         .foregroundStyle(Color.sText)
         .onAppear {
@@ -88,6 +98,17 @@ struct SettingsView: View {
         .onChange(of: updater.state) { _, _ in
             NotificationCenter.default.post(name: .popupContentChanged, object: nil)
         }
+    }
+
+    // Skupna vrstica s stikalom: enaka višina (korak) za vsa stikala v nastavitvah
+    private func toggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
+        HStack {
+            Text(title)
+                .font(mono(14))
+            Spacer()
+            SettingsPill(isOn: isOn, tint: tint)
+        }
+        .frame(height: 34)
     }
 
     // MARK: Header
@@ -130,8 +151,8 @@ struct SettingsView: View {
             .padding(3)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.08)))
         }
-        .padding(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 7))
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.sCard))
+        .padding(EdgeInsets(top: 6, leading: 11, bottom: 6, trailing: 6))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.sCard))
     }
 
     private func languageButton(_ label: String, code: String) -> some View {
@@ -142,7 +163,7 @@ struct SettingsView: View {
             Text(label)
                 .font(mono(13, .bold))
                 .foregroundStyle(selected ? Color.sDark : Color.sText)
-                .frame(width: 56, height: 32)
+                .frame(width: 56, height: 28)
                 .background(RoundedRectangle(cornerRadius: 8)
                     .fill(selected ? Color(red: 0.925, green: 0.933, blue: 0.941) : Color.clear))
                 .contentShape(RoundedRectangle(cornerRadius: 8))
@@ -153,26 +174,24 @@ struct SettingsView: View {
     // MARK: Accent
 
     private var accentCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(L10n.t("Accent colour", "Barva poudarka"))
                 .font(mono(14))
-            HStack {
+            HStack(spacing: 0) {
                 ForEach(Array(AccentOption.allCases.enumerated()), id: \.element.id) { index, option in
                     if index > 0 { Spacer(minLength: 0) }
                     swatch(option)
                 }
             }
-            Text(L10n.t("Multicolour uses green for normal and coral for warnings. A single colour is used for everything.",
-                        "Večbarvno uporablja zeleno za normalno stanje in koralno za opozorila. Ena barva se uporabi za vse."))
-                .font(mono(12))
-                .foregroundStyle(Color.sMuted)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
+        .padding(cardPad)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.sCard))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.sCard))
+        .help(L10n.t("Multicolour uses green for normal and coral for warnings. A single colour is used for everything.",
+                     "Večbarvno uporablja zeleno za normalno stanje in koralno za opozorila. Ena barva se uporabi za vse."))
     }
 
+    // Ikona 30 pt, obroč izbire 2 pt z 2 pt razmaka (skupaj 38 pt)
     private func swatch(_ option: AccentOption) -> some View {
         let selected = accent == option.rawValue
         return Button {
@@ -180,82 +199,69 @@ struct SettingsView: View {
         } label: {
             ZStack {
                 Circle()
-                    .stroke(selected ? Color.sText : Color.clear, lineWidth: 2)
-                    .frame(width: 36, height: 36)
+                    .strokeBorder(selected ? Color.white : Color.clear, lineWidth: 2)
+                    .frame(width: 38, height: 38)
                 if let rgb = option.rgb {
                     Circle()
                         .fill(rgb.color)
-                        .frame(width: 26, height: 26)
+                        .frame(width: 30, height: 30)
                 } else {
                     multicolourIcon
                 }
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 38, height: 38)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(option.accessibilityName)
     }
 
+    // Večbarvna ikona: bela podlaga, šest pik v barvah poudarka in temna pika v sredini
     private var multicolourIcon: some View {
         let dots: [Color] = [
-            Color(red: 0.816, green: 0.227, blue: 0.227), // rdeča
-            Color(red: 0.933, green: 0.545, blue: 0.231), // oranžna
-            Color(red: 0.361, green: 0.710, blue: 0.478), // zelena
-            Color(red: 0.290, green: 0.659, blue: 0.910), // modra
-            Color(red: 0.690, green: 0.463, blue: 0.941), // vijolična
-            Color(red: 0.937, green: 0.435, blue: 0.753)  // roza
+            AccentOption.red.rgb!.color,
+            AccentOption.orange.rgb!.color,
+            AccentOption.green.rgb!.color,
+            AccentOption.blue.rgb!.color,
+            AccentOption.purple.rgb!.color,
+            AccentOption.pink.rgb!.color
         ]
         return ZStack {
-            Circle().fill(Color.white).frame(width: 26, height: 26)
+            Circle().fill(Color.white).frame(width: 30, height: 30)
             ForEach(0..<6, id: \.self) { i in
                 let angle = Double(i) * 60.0 - 90.0
                 Circle()
                     .fill(dots[i])
-                    .frame(width: 6.6, height: 6.6)
-                    .offset(x: 8.2 * cos(angle * .pi / 180), y: 8.2 * sin(angle * .pi / 180))
+                    .frame(width: 7.4, height: 7.4)
+                    .offset(x: 9.2 * cos(angle * .pi / 180), y: 9.2 * sin(angle * .pi / 180))
             }
-            Circle().fill(Color(red: 0.067, green: 0.071, blue: 0.078)).frame(width: 6.6, height: 6.6)
+            Circle().fill(Color(red: 0.067, green: 0.071, blue: 0.078)).frame(width: 6, height: 6)
         }
     }
 
     // MARK: Modules
 
-    private func moduleToggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
-        HStack {
-            Text(title)
-                .font(mono(14))
-            Spacer()
-            SettingsPill(isOn: isOn, tint: tint)
-        }
-        .frame(height: 44)
-    }
-
     private var modulesCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(L10n.t("Modules", "Moduli"))
                 .font(mono(14))
                 .padding(.bottom, 4)
-            moduleToggleRow("GPU", isOn: $moduleGPU)
-            moduleToggleRow(L10n.t("Disk", "Disk"), isOn: $moduleDisk)
-            moduleToggleRow(L10n.t("Network", "Omrežje"), isOn: $moduleNet)
-            moduleToggleRow(L10n.t("Fans", "Ventilatorji"), isOn: $moduleFan)
-            Text(L10n.t("Shown in the popup. Fans appear only on Macs with a fan.",
-                        "Prikazani so v oknu. Ventilatorji se pojavijo samo na Macih z ventilatorjem."))
-                .font(mono(12))
-                .foregroundStyle(Color.sMuted)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 4)
+            toggleRow("GPU", isOn: $moduleGPU)
+            toggleRow(L10n.t("Disk", "Disk"), isOn: $moduleDisk)
+            toggleRow(L10n.t("Network", "Omrežje"), isOn: $moduleNet)
+            toggleRow(L10n.t("Fans", "Ventilatorji"), isOn: $moduleFan)
         }
-        .padding(EdgeInsets(top: 14, leading: 14, bottom: 12, trailing: 14))
+        .padding(cardPad)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.sCard))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.sCard))
+        .help(L10n.t("Shown in the popup. Fans appear only on Macs with a fan.",
+                     "Prikazani so v oknu. Ventilatorji se pojavijo samo na Macih z ventilatorjem."))
     }
 
     // MARK: Limits
 
     private func limitCard(title: String, note: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title).font(mono(14))
                 Spacer()
@@ -265,14 +271,11 @@ struct SettingsView: View {
             }
             Slider(value: value, in: range, step: 1)
                 .tint(tint)
-            Text(note)
-                .font(mono(12))
-                .foregroundStyle(Color.sMuted)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
+        .padding(cardPad)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.sCard))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.sCard))
+        .help(note)
     }
 
     // MARK: Launch at login
@@ -282,16 +285,6 @@ struct SettingsView: View {
             get: { launchAtLogin },
             set: { setLaunchAtLogin($0) }
         )
-    }
-
-    private var launchRow: some View {
-        HStack {
-            Text(L10n.t("Launch at login", "Zaženi ob prijavi"))
-                .font(mono(14))
-            Spacer()
-            SettingsPill(isOn: launchBinding, tint: tint)
-        }
-        .frame(height: 52)
     }
 
     private func setLaunchAtLogin(_ on: Bool) {
@@ -323,16 +316,6 @@ struct SettingsView: View {
         )
     }
 
-    private var autoUpdateRow: some View {
-        HStack {
-            Text(L10n.t("Check for updates automatically", "Samodejno preveri posodobitve"))
-                .font(mono(14))
-            Spacer()
-            SettingsPill(isOn: autoUpdateBinding, tint: tint)
-        }
-        .frame(height: 52)
-    }
-
     private var updateCheckRow: some View {
         HStack(spacing: 12) {
             Button {
@@ -340,12 +323,15 @@ struct SettingsView: View {
             } label: {
                 Text(L10n.t("Check for updates", "Preveri posodobitve"))
                     .font(mono(13, .bold))
+                    .lineLimit(1)
+                    .fixedSize()
                     .padding(.horizontal, 14)
                     .frame(height: 36)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.1)))
                     .contentShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+            .layoutPriority(1)
             VStack(alignment: .leading, spacing: 4) {
                 Text(updater.message)
                     .font(mono(12))
@@ -359,7 +345,5 @@ struct SettingsView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.top, 8)
-        .padding(.bottom, 8)
     }
 }
