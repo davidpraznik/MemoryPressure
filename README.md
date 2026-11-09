@@ -1,4 +1,4 @@
-![Memory Pressure, a menu bar memory monitor for macOS.](docs/memorypressure-social-preview-v4.png)
+![Memory Pressure, a menu bar memory monitor for macOS.](docs/memorypressure-social-preview-v5.png)
 
 # Memory Pressure
 
