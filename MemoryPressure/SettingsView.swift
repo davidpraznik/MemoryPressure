@@ -20,11 +20,11 @@ private struct SettingsPill: View {
             ZStack(alignment: isOn ? .trailing : .leading) {
                 Capsule()
                     .fill(isOn ? tint : Color.white.opacity(0.18))
-                    .frame(width: 46, height: 28)
+                    .frame(width: 42, height: 24)
                 Circle()
                     .fill(Color.white)
-                    .frame(width: 22, height: 22)
-                    .padding(3)
+                    .frame(width: 20, height: 20)
+                    .padding(2)
             }
             .animation(.easeOut(duration: 0.15), value: isOn)
         }
@@ -78,7 +78,7 @@ struct SettingsView: View {
                 value: $cpuLimit,
                 range: 70...100
             )
-            VStack(spacing: 0) {
+            VStack(spacing: 6) {
                 toggleRow(L10n.t("Remind me at high pressure", "Opomnik ob visokem pritisku"),
                           isOn: $remindEnabled)
                 toggleRow(L10n.t("Auto clear", "Samodejno čiščenje"), isOn: $autoClearEnabled)
@@ -108,7 +108,7 @@ struct SettingsView: View {
             Spacer()
             SettingsPill(isOn: isOn, tint: tint)
         }
-        .frame(height: 34)
+        .frame(height: 24)
     }
 
     // MARK: Header
@@ -242,10 +242,9 @@ struct SettingsView: View {
     // MARK: Modules
 
     private var modulesCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(L10n.t("Modules", "Moduli"))
                 .font(mono(14))
-                .padding(.bottom, 4)
             toggleRow("GPU", isOn: $moduleGPU)
             toggleRow(L10n.t("Disk", "Disk"), isOn: $moduleDisk)
             toggleRow(L10n.t("Network", "Omrežje"), isOn: $moduleNet)
