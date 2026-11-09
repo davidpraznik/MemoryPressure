@@ -29,7 +29,10 @@ macOS fills free RAM with cached files on purpose, so a high RAM percentage is n
 - Modules: show or hide GPU, disk, network and fans.
 - Memory pressure limit: the level at which the reminder and auto clear start.
 - CPU limit: the CPU number in the menu bar changes colour at this level.
+- Remind me at high pressure: turns the reminder card on or off.
+- Auto clear: clears memory by itself when the limit is reached.
 - Launch at login.
+- Check for updates automatically, and a Check for updates button. When a newer version exists on GitHub, the app tells you and links to the release page. It does not install anything.
 
 ## Requirements
 
